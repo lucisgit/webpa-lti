@@ -79,8 +79,14 @@
         $changed = $changed || ($enabled != $consumer->enabled);
         $secret = fetch_POST('source_secret');
         $changed = $changed || ($secret != $consumer->secret);
+        $url = fetch_POST('source_url');
+        $changed = $changed || ($url != $consumer->url);
+        $token = fetch_POST('source_token');
+        $changed = $changed || ($token != $consumer->token);
         $consumer->name = $name;
         $consumer->secret = $secret;
+        $consumer->url = $url;
+        $consumer->token = $token;
         $consumer->protected = TRUE;
         $consumer->enabled = $enabled;
         $date = fetch_POST('source_from');
@@ -164,6 +170,18 @@ information stored in the system.
       <td><label for="secret">Secret</label></td>
       <td>
         <input type="text" id="secret" name="source_secret" value="<?php echo $consumer->secret; ?>" size="50" maxlength="255">
+      </td>
+    </tr>
+    <tr>
+      <td><label for="url">URL</label></td>
+      <td>
+        <input type="text" id="url" name="source_url" value="<?php echo $consumer->url; ?>" size="50" maxlength="255">
+      </td>
+    </tr>
+    <tr>
+      <td><label for="token">Web services token</label></td>
+      <td>
+        <input type="text" id="token" name="source_token" value="<?php echo $consumer->token; ?>" size="50" maxlength="255">
       </td>
     </tr>
     <tr>

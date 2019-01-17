@@ -605,6 +605,9 @@ will not be made until you confirm them.
 
     }
 
+  } else if (!empty($consumer->url) && !empty($consumer->token)) {
+      $memberships = get_moodle_memberships($consumer->url, $consumer->token, $resource_link->lti_context_id);
+      print_r($memberships);
   } else {
 
 ?>
@@ -713,5 +716,154 @@ $UI->content_end();
     }
 
   }
+
+/**
+ * Fetch course membership data using the Moodle web services API.
+ *
+ * @param string $url The Moodle site url
+ * @param string $token The Moodle API token
+ * @param int $courseid The Moodle course id
+ * @return array The course membership data
+ */
+function get_moodle_memberships($url, $token, $courseid) {
+    // Start by fetching all enrolled users.
+    $method = 'core_enrol_get_enrolled_users';
+    $params = array(
+        'courseid' => $courseid,
+        'options'  => array(
+            array(
+                'name'  => 'onlyactive',
+                'value' => 1
+            ),
+            array(
+                'name'  => 'userfields',
+                'value' => 'id, username, firstname, lastname, roles'
+            ),
+            array(
+                'name'  => 'sortby',
+                'value' => 'lastname'
+            ),
+            array(
+                'name'  => 'sortdirection',
+                'value' => 'ASC'
+            )
+        )
+    );
+    $users = call_moodle_api($url, $token, $method, $params);
+
+    // Get the course groupings.
+    $method = 'core_group_get_course_groupings';
+    $params = array(
+        'courseid' => $courseid
+    );
+    if (!$coursegroupings = call_moodle_api($url, $token, $method, $params)) {
+        // If the course contains no groupings, just get all the groups.
+        $method = 'core_group_get_course_groups';
+        $groupings = array();
+        $groupings[0] = new stdClass();
+        $groupings[0]->groups = call_moodle_api($url, $token, $method, $params);
+    } else {
+        // Otherwise get the groups belonging to each grouping.
+        $method = 'core_group_get_groupings';
+        $groupingids = array_map(function($grouping) {
+            return $grouping->id;
+        }, $coursegroupings);
+        $params = array(
+            'groupingids'  => $groupingids,
+            'returngroups' => 1
+        );
+        $groupings = call_moodle_api($url, $token, $method, $params);
+    }
+
+    // Each grouping is analogous to a WebPA collection.
+    $collections = array();
+
+    foreach ($groupings as $groupingindex => $grouping) {
+        $collection = new stdClass();
+        $collection->name = isset($grouping->name) ? $grouping->name : 'Collection ' . ($groupingindex + 1);
+
+        // Keep track of users within this grouping/collection.
+        $groupingusers = $users;
+
+        // Get members of all groups in this grouping.
+        $method = 'core_group_get_group_members';
+        $groupids = array_map(function($group) {
+            return $group->id;
+        }, $grouping->groups);
+        $params = array(
+            'groupids' => $groupids
+        );
+        $groupmembers = call_moodle_api($url, $token, $method, $params);
+
+        // Create groups within collection and add members.
+        $collection->groups = array();
+        foreach ($grouping->groups as $groupindex => $group) {
+            $groupid = $group->id;
+            $groupname = isset($group->name) ? $group->name : 'Group ' . ($groupindex + 1);
+            $group = new stdClass();
+            $group->name = $groupname;
+            $group->members = array();
+            foreach ($groupmembers as $membergroup) {
+                if ($membergroup->groupid == $groupid) {
+                    // Get user details for group members.
+                    foreach ($groupingusers as $userindex => $user) {
+                        if (in_array($user->id, $membergroup->userids)) {
+                            // Discard superfluous role attributes.
+                            foreach ($user->roles as $role) {
+                                unset($role->roleid, $role->sortorder);
+                            }
+                            $group->members[] = $user;
+                            // Each user can only be in one group per collection.
+                            unset($groupingusers[$userindex]);
+                        }
+                    }
+                    break;
+                }
+            }
+            $collection->groups[$groupindex] = $group;
+        }
+
+        $collections[$groupingindex] = $collection;
+    }
+
+    return $collections;
+}
+
+/**
+ * Call the specified Moodle API method, passing the parameters provided.
+ *
+ * @param string $url The Moodle site url
+ * @param string $token The Moodle API token
+ * @param string $method The API method to call
+ * @param array $params The params to pass
+ * @return array The decoded response
+ */
+function call_moodle_api($url, $token, $method, $params) {
+    // Prepare request data.
+    $serviceurl = $url . '/webservice/rest/server.php';
+    $params = array_merge(array(
+        'wstoken'            => $token,
+        'wsfunction'         => $method,
+        'moodlewsrestformat' => 'json'
+    ), $params);
+
+    // Submit request to Moodle API.
+    require_once('../../lib/moodle_curl.php');
+    $curl = new curl;
+    $response = $curl->post($serviceurl, $params);
+
+    // If all is well, return data.
+    $json = json_decode($response);
+    if ($curl->info['http_code'] == 200 && !empty($json)) {
+        return $json;
+    }
+
+    // Check for invalid data and log any errors.
+    if (empty($json)) {
+        error_log('Invalid response data');
+    }
+    error_log('HTTP code: ' . $curl->info['http_code']);
+    error_log('API response: ' . $response);
+}
 
 ?>

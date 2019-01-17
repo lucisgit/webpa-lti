@@ -2,6 +2,8 @@ CREATE TABLE pa2_lti_consumer (
   consumer_key varchar(255) NOT NULL,
   name varchar(45) NOT NULL,
   secret varchar(32) NOT NULL,
+  url varchar(255) DEFAULT NULL,
+  token varchar(255) DEFAULT NULL,
   lti_version varchar(12) DEFAULT NULL,
   consumer_name varchar(255) DEFAULT NULL,
   consumer_version varchar(255) DEFAULT NULL,

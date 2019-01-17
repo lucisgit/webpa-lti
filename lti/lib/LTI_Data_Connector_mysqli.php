@@ -70,7 +70,7 @@ class LTI_Data_Connector_MySQLi extends LTI_Data_Connector {
   public function Tool_Consumer_load($consumer) {
 
     $ok = FALSE;
-    $sql = 'SELECT name, secret, lti_version, consumer_name, consumer_version, consumer_guid, css_path, protected, enabled, enable_from, enable_until, last_access, created, updated ' .
+    $sql = 'SELECT name, secret, url, token, lti_version, consumer_name, consumer_version, consumer_guid, css_path, protected, enabled, enable_from, enable_until, last_access, created, updated ' .
            "FROM {$this->dbTableNamePrefix}" . LTI_Data_Connector::CONSUMER_TABLE_NAME . ' ' .
            'WHERE consumer_key = ?';
     $result = $this->db->prepare($sql);
@@ -80,7 +80,7 @@ class LTI_Data_Connector_MySQLi extends LTI_Data_Connector {
     }
     if ($result) {
       if ($result->execute()) {
-        if ($result->bind_result($consumer->name, $consumer->secret, $consumer->lti_version, $consumer->consumer_name, $consumer->consumer_version,
+        if ($result->bind_result($consumer->name, $consumer->secret, $consumer->url, $consumer->token, $consumer->lti_version, $consumer->consumer_name, $consumer->consumer_version,
            $consumer->consumer_guid, $consumer->css_path, $protected, $enabled, $from, $until, $last, $created, $updated)) {
           if ($result->fetch()) {
             $consumer->protected = ($protected == 1);
@@ -145,21 +145,21 @@ class LTI_Data_Connector_MySQLi extends LTI_Data_Connector {
     $key = $consumer->getKey();
     if (is_null($consumer->created)) {
       $sql = "INSERT INTO {$this->dbTableNamePrefix}" . LTI_Data_Connector::CONSUMER_TABLE_NAME . ' (consumer_key, name, ' .
-             'secret, lti_version, consumer_name, consumer_version, consumer_guid, css_path, protected, enabled, enable_from, enable_until, last_access, created, updated) ' .
-             'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+             'secret, url, token, lti_version, consumer_name, consumer_version, consumer_guid, css_path, protected, enabled, enable_from, enable_until, last_access, created, updated) ' .
+             'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
       $result = $this->db->prepare($sql);
       if ($result) {
-        $ok = $result->bind_param('ssssssssiisssss', $key, $consumer->name, $consumer->secret, $consumer->lti_version,
+        $ok = $result->bind_param('ssssssssssiisssss', $key, $consumer->name, $consumer->secret, $consumer->url, $consumer->token, $consumer->lti_version,
            $consumer->consumer_name, $consumer->consumer_version, $consumer->consumer_guid, $consumer->css_path, $protected, $enabled, $from, $until, $last, $now, $now);
       }
     } else {
       $sql = "UPDATE {$this->dbTableNamePrefix}" . LTI_Data_Connector::CONSUMER_TABLE_NAME . ' SET ' .
-             'name = ?, secret= ?, lti_version = ?, consumer_name = ?, consumer_version = ?, consumer_guid = ?, ' .
+             'name = ?, secret= ?, url = ?, token = ?, lti_version = ?, consumer_name = ?, consumer_version = ?, consumer_guid = ?, ' .
              'css_path = ?, protected = ?, enabled = ?, enable_from = ?, enable_until = ?, last_access = ?, updated = ? ' .
              'WHERE consumer_key = ?';
       $result = $this->db->prepare($sql);
       if ($result) {
-        $ok = $result->bind_param('sssssssiisssss', $consumer->name, $consumer->secret, $consumer->lti_version,
+        $ok = $result->bind_param('sssssssssiisssss', $consumer->name, $consumer->secret, $consumer->url, $consumer->token, $consumer->lti_version,
            $consumer->consumer_name, $consumer->consumer_version, $consumer->consumer_guid, $consumer->css_path, $protected, $enabled, $from, $until, $last, $now, $key);
       }
     }
@@ -281,13 +281,13 @@ class LTI_Data_Connector_MySQLi extends LTI_Data_Connector {
 
     $consumers = array();
 
-    $sql = 'SELECT consumer_key, name, secret, lti_version, consumer_name, consumer_version, consumer_guid, css_path, protected, enabled, enable_from, enable_until, last_access, created, updated ' .
+    $sql = 'SELECT consumer_key, name, secret, url, token, lti_version, consumer_name, consumer_version, consumer_guid, css_path, protected, enabled, enable_from, enable_until, last_access, created, updated ' .
            "FROM {$this->dbTableNamePrefix}" . LTI_Data_Connector::CONSUMER_TABLE_NAME . ' ' .
            'ORDER BY name';
     $result = $this->db->prepare($sql);
     if ($result) {
       if ($result->execute()) {
-        if ($result->bind_result($consumer_key, $name, $secret, $lti_version, $consumer_name, $consumer_version, $consumer_guid,
+        if ($result->bind_result($consumer_key, $name, $secret, $url, $token, $lti_version, $consumer_name, $consumer_version, $consumer_guid,
            $css_path, $protected, $enabled, $from, $until, $last, $created, $updated)) {
           while ($result->fetch()) {
             $consumer = new LTI_Tool_Consumer($consumer_key, $this);

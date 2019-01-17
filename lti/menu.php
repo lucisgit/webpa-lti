@@ -46,7 +46,7 @@
 ### Update upload option if Memberships service is available
 #
       $menu = $this->get_menu('Admin');
-      if ($user_resource_link->hasMembershipsService()) {
+      if ($user_resource_link->hasMembershipsService() || (!empty($consumer->url) && !empty($consumer->token))) {
         $menu['sync data'] = APP__WWW . "/mod/$mod/admin/manage/";
 //      } else {
 //        unset($menu['upload data']);

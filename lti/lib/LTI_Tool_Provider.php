@@ -1112,6 +1112,14 @@ class LTI_Tool_Consumer {
  */
   public $secret = NULL;
 /**
+ * @var string URL.
+ */
+  public $url = NULL;
+/**
+ * @var string Web services token.
+ */
+  public $token = NULL;
+/**
  * @var string LTI version (as reported by last tool consumer connection).
  */
   public $lti_version = NULL;
@@ -1203,6 +1211,8 @@ class LTI_Tool_Consumer {
     $this->key = NULL;
     $this->name = NULL;
     $this->secret = NULL;
+    $this->url = NULL;
+    $this->token = NULL;
     $this->lti_version = NULL;
     $this->consumer_name = NULL;
     $this->consumer_version = NULL;
